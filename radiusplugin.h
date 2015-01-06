@@ -1,7 +1,7 @@
 /*
- *  radiusplugin -- An OpenVPN plugin for do radius authentication 
- *					and accounting.
- * 
+ *  radiusplugin -- An OpenVPN plugin for do radius authentication
+ *                  and accounting.
+ *
  *  Copyright (C) 2005 EWE TEL GmbH/Ralf Luebben <ralfluebben@gmx.de>
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -18,13 +18,14 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
- 
+
 #ifndef _PLUGIN_H_
 #define _PLUGIN_H_
 
 
 #include <stdio.h>
-#include <string.h>
+#include <string>
+#include <ostream>
 #include <ctype.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -70,26 +71,30 @@ using namespace std;
 /** This file defines some constants and some functions. The constants and functions
  * are the original function from openvpn auth-pam plugin.*/
 
+enum MiscConstants {
+  logVerbThreshold = 5,
+};
+
 #define DEBUG(verb) ((verb) >= 5) /**< A macro for the debugging.*/
 
 /* Command codes for foreground -> background communication */
 #define COMMAND_VERIFY 0 /**<The verify command for the background process.*/
 #define COMMAND_EXIT   1 /**<The ecit command for the background process.*/
-#define ADD_USER   	   2 /**<The add user command for the background process.*/
-#define DEL_USER	   3 /**<The del user command for the background process.*/
+#define ADD_USER       2 /**<The add user command for the background process.*/
+#define DEL_USER       3 /**<The del user command for the background process.*/
 
 /* Response codes for background -> foreground communication */
-#define RESPONSE_INIT_SUCCEEDED   10 	/**< Response code from background process to foreground procce.*/
-#define RESPONSE_INIT_FAILED      11 	/**< Response code from background process to foreground procce.*/
-#define RESPONSE_SUCCEEDED 12 			/**< Response code from background process to foreground procce.*/
-#define RESPONSE_FAILED    13 			/**< Response code from background process to foreground procce.*/
+#define RESPONSE_INIT_SUCCEEDED   10    /**< Response code from background process to foreground procce.*/
+#define RESPONSE_INIT_FAILED      11    /**< Response code from background process to foreground procce.*/
+#define RESPONSE_SUCCEEDED 12           /**< Response code from background process to foreground procce.*/
+#define RESPONSE_FAILED    13           /**< Response code from background process to foreground procce.*/
 
 
 
 /** A struct for additional command line arguments.*/
 struct name_value {
-  const char *name;		/**<The name of name value pair.*/
-  const char *value;	/**<The value of the name value pair.*/
+  const char *name;     /**<The name of name value pair.*/
+  const char *value;    /**<The value of the name value pair.*/
 };
 
 
@@ -97,8 +102,8 @@ struct name_value {
 
 /** A list for the struct name_value.*/
 struct name_value_list {
-  int len;									/**<The length of the list.*/
-  struct name_value data[N_NAME_VALUE]; 	/**<The data of the list.*/
+  int len;                                  /**<The length of the list.*/
+  struct name_value data[N_NAME_VALUE];     /**<The data of the list.*/
 };
 
 
@@ -112,6 +117,35 @@ void * auth_user_pass_verify(void *);
 void write_auth_control_file(PluginContext *, string filename, char c);
 string getTime();
 
+
+class StdLogger
+{
+public:
+  // default openvpn verb = 1
+  StdLogger(const std::string &log_tag, int cur_verbosity = 1);
+  ~StdLogger();
+  void init_verbosity(int cur_verbosity);
+
+  void flush();
+
+  std::ostream &operator()();
+  std::ostream &debug();
+
+private:
+  const static std::size_t time_buf_len_ = 32;
+
+  static const char* date_fmt_;
+
+  std::string tag_;
+  int verb_;
+  bool debug_allowed_;
+  char buf_[time_buf_len_];
+
+  std::ostream &log;
+  std::ostream null_out_;
+
+  const char *time_();
+};
 
 
 #endif //_PLUGIN_H_

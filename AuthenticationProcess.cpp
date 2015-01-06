@@ -1,7 +1,7 @@
 /*
- *  radiusplugin -- An OpenVPN plugin for do radius authentication 
- *					and accounting.
- * 
+ *  radiusplugin -- An OpenVPN plugin for do radius authentication
+ *                  and accounting.
+ *
  *  Copyright (C) 2005 EWE TEL GmbH/Ralf Luebben <ralfluebben@gmx.de>
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -18,9 +18,9 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
- 
- 
-  
+
+
+
 #include "AuthenticationProcess.h"
 
 /** This method is the background process for authentication.
@@ -28,8 +28,8 @@
  * Otherwise it waits the command COMMAND_VERIFY to authenticate
  * an user. It authenticates the user with the radius protocol and
  * sends the result back to the foreground process. If the response
- * is an access accept ticket, 
- * it parses the response from the radius server for the following attributes and 
+ * is an access accept ticket,
+ * it parses the response from the radius server for the following attributes and
  * send them to the foregroundprocess too.:
  * - FramedIpAddress
  * - FramedRoutes
@@ -40,131 +40,145 @@
 
 void AuthenticationProcess::Authentication(PluginContext * context)
 {
-	UserAuth *		user; 		/**<The user to authenticate.*/
-  	int 			command;	/**<A command from the parent process.*/
-  
- 	//Tell the parent everythink is ok.
-  	try
-  	{
-  		context->authsocketforegr.send(RESPONSE_INIT_SUCCEEDED);
-  	}
-  	catch(Exception &e)
-  	{
-  		cerr << getTime() << "RADIUS-PLUGIN: BACKGROUND AUTH:" << e <<"\n";
-  		goto done;
-  	}
-     	if (DEBUG (context->getVerbosity()))
- 			cerr << getTime() << "RADIUS-PLUGIN: BACKGROUND  AUTH: Started, RESPONSE_INIT_SUCCEEDED was sent to Foreground Process.\n";
-   	// Event loop
-  	while (1)
-    {
-    	// get a command from foreground process 
-      	command = context->authsocketforegr.recvInt();
-      
-	    switch (command)
-		{
-		//authenticate the user
-		case COMMAND_VERIFY:
-			//allcoate memory for the new user
-			try
-		  	{
-			    user=new UserAuth;
-			    //get the user informations
-			    user->setUsername(context->authsocketforegr.recvStr());
-			    user->setPassword(context->authsocketforegr.recvStr());
-			    user->setPortnumber(context->authsocketforegr.recvInt());
-			    user->setSessionId(context->authsocketforegr.recvStr());
-			    user->setCallingStationId(context->authsocketforegr.recvStr());
-			    user->setCommonname(context->authsocketforegr.recvStr());
-				// framed-ip is an @IP if we're renegotiating, "" otherwise
-			    user->setFramedIp(context->authsocketforegr.recvStr());
-		 		
-			    if (DEBUG (context->getVerbosity()) && (user->getFramedIp().compare("") == 0))
-			    cerr << getTime() << "RADIUS-PLUGIN: BACKGROUND  AUTH: New user auth: username: " << user->getUsername() << ", password: *****, calling station: " << user->getCallingStationId() << ", commonname: " << user->getCommonname() << ".\n";
+    UserAuth *      user;       /**<The user to authenticate.*/
+    int             command;    /**<A command from the parent process.*/
 
-			    if (DEBUG (context->getVerbosity()) && (user->getFramedIp().compare("") !=0 ))
-			    cerr << getTime() << "RADIUS-PLUGIN: BACKGROUND  AUTH: Old user ReAuth: username: " << user->getUsername() << ", password: *****, calling station: " << user->getCallingStationId() << ", commonname: " << user->getCommonname() << ".\n";
-			    
-			    //send the AcceptRequestPacket
-			    if (user->sendAcceptRequestPacket(context)==0) /* Succeeded */
-			    {
-			     	//if the authentication succeeded
-			     	//create the user configuration file
-			     	//Unless this is a renegotiation (ie: if FramedIP is already set)
-			     	if (user->createCcdFile(context)>0 && (user->getFramedIp().compare("") == 0))
-			     	{
-			     		throw Exception ("RADIUS-PLUGIN: BACKGROUND AUTH: Ccd-file could not created for user with commonname: "+user->getCommonname()+"!\n");
-			     	}
-			     				     	
-			     	//tell the parent process
-			     	context->authsocketforegr.send(RESPONSE_SUCCEEDED);
-								     	
-			     	//send the routes to the parent process
-			     	context->authsocketforegr.send(user->getFramedRoutes());
-					
-				//send the framed ip to the parent process
-			     	context->authsocketforegr.send(user->getFramedIp());
-										
-					//send the interval to the parent process
-			     	context->authsocketforegr.send(user->getAcctInterimInterval());
-			     	
-			     	//send the vsa buffer
-			     	context->authsocketforegr.send(user->getVsaBuf(), user->getVsaBufLen());
-			     	
-			     	
-			     	//free user_context_auth
-			     	delete user;
-			     	
-			     	if (DEBUG (context->getVerbosity()))
-		    			cerr << getTime() << "RADIUS-PLUGIN: BACKGROUND  AUTH: Auth succeeded in radius_server().\n";
-			  		
-			  		
-			    	
-			    }
-			    else /* Failed */
-			    {
-			    	context->authsocketforegr.send(RESPONSE_FAILED);
-					throw Exception("RADIUS-PLUGIN: BACKGROUND  AUTH: Auth failed!.\n");	
-			    }
-		  	}
-		    catch (Exception &e)
-		    {
-		    	cerr << getTime() << e;
-		    	delete user;
-		      	if (e.getErrnum()==Exception::SOCKETSEND || e.getErrnum()==Exception::SOCKETRECV)
-				{
-					goto done;
-				}
-		    }
-		    catch(std::bad_alloc){
-		      cerr << getTime() << "RADIUS-PLUGIN: BACKGROUND AUTH: New failed for UserAuth." << endl;
-		      goto done;
-		    }
-		    catch (...)
-		    {
-		    	delete user;
-		      	goto done;
-		    }
-		  	
-		  	break;
-	
-		//exit the loop
-		case COMMAND_EXIT:
-			goto done;
-	
-		case -1:
-		  	cerr << getTime() << "RADIUS-PLUGIN: BACKGROUND AUTH: read error on command channel."<< endl;
-		  	break;
-	
-		default:
-		  	cerr << getTime() << "RADIUS-PLUGIN: BACKGROUND AUTH: unknown command code: code="<<command<<", exiting.\n";
-		  	goto done;
-		}
+    StdLogger log("RADIUS-PLUGIN [PLUGIN-AUTH-LOOP]", context->getVerbosity());
+    log.debug() << "Auth starting...\n";
+    //Tell the parent everythink is ok.
+    try {
+        context->authsocketforegr.send(RESPONSE_INIT_SUCCEEDED);
+    }
+    catch(Exception &e) {
+      log() << "fail while send init success responce to parent process: " << e <<"\n";
+      goto done;
+    }
+    catch(std::exception &e) {
+      log() << "fail while send init success responce to parent process: " << e.what() <<"\n";
+      goto done;
+    }
+    log.debug() << " Started, RESPONSE_INIT_SUCCEEDED was sent to Foreground Process.\n";
+    // Event loop
+    while (1)
+    {
+        // get a command from foreground process
+        command = context->authsocketforegr.recvInt();
+
+        log() << "got command: '" << command << "'\n";
+
+        switch (command)
+        {
+        //authenticate the user
+        case COMMAND_VERIFY:
+          log.debug() << " verifying user\n";
+            //allcoate memory for the new user
+            try
+            {
+                user=new UserAuth;
+                //get the user informations
+                user->setUsername(context->authsocketforegr.recvStr());
+                user->setPassword(context->authsocketforegr.recvStr());
+                user->setPortnumber(context->authsocketforegr.recvInt());
+                user->setSessionId(context->authsocketforegr.recvStr());
+                user->setCallingStationId(context->authsocketforegr.recvStr());
+                user->setCommonname(context->authsocketforegr.recvStr());
+                // framed-ip is an @IP if we're renegotiating, "" otherwise
+                user->setFramedIp(context->authsocketforegr.recvStr());
+
+                if(user->getFramedIp().empty()) {
+                  log.debug() << " New user auth: user: " << user->getUsername()
+                              << ", host: " << user->getCallingStationId()
+                              << ", port: " << user->getPortnumber()
+                              << ", SID: " << user->getSessionId()
+                              << ", frame ip: " << user->getFramedIp() << "\n";
+                  //<< ", CN: " << user->getCommonname() << ".\n";
+                } else {
+                  log.debug() << " Old user ReAuth: username: " << user->getUsername()
+                       << ", calling station: " << user->getCallingStationId()
+                       << ", commonname: " << user->getCommonname() << ".\n";
+                }
+
+                //send the AcceptRequestPacket
+                if (user->sendAcceptRequestPacket(context)==0) /* Succeeded */
+                {
+                    //if the authentication succeeded
+                    //create the user configuration file
+                    //Unless this is a renegotiation (ie: if FramedIP is already set)
+                    if (user->createCcdFile(context)>0 && (user->getFramedIp().compare("") == 0)) {
+                      log() << " couldn't create ccd file (fatal)\n";
+                      throw Exception ("Ccd-file could not created for user with commonname: " +
+                                       user->getCommonname()+"!");
+                    }
+
+                    //tell the parent process
+                    context->authsocketforegr.send(RESPONSE_SUCCEEDED);
+
+                    //send the routes to the parent process
+                    context->authsocketforegr.send(user->getFramedRoutes());
+
+                    //send the framed ip to the parent process
+                    context->authsocketforegr.send(user->getFramedIp());
+
+                    if(user->getAcctInterimInterval() != 60) {
+                      log.debug() << " acct interim interval = " << user->getAcctInterimInterval() << "\n";
+                    }
+                    //send the interval to the parent process
+                    context->authsocketforegr.send(user->getAcctInterimInterval());
+
+                    //send the vsa buffer
+                    context->authsocketforegr.send(user->getVsaBuf(), user->getVsaBufLen());
+
+                    //free user_context_auth
+                    delete user;
+                    log.debug() << " Auth succeeded in radius_server().\n";
+                }
+                else /* Failed */ {
+                  log() << " failed send accept request (fatal)\n";
+                  context->authsocketforegr.send(RESPONSE_FAILED);
+                  throw Exception("Auth failed!");
+                }
+            }
+            catch(std::bad_alloc){
+              log() << " memory allocation failed. while verify user" << endl;
+              goto done;
+            }
+            catch (Exception &e) {
+                log() << " failed while verify user: " << e << "\n";
+                delete user;
+                if (e.getErrnum()==Exception::SOCKETSEND || e.getErrnum()==Exception::SOCKETRECV) {
+                    log() << " socket error while verify user(critical)\n";
+                    goto done;
+                }
+            }
+            catch (std::exception &e) {
+              log() << " failed while verify user: " << e.what() << "\n";
+              delete user;
+            }
+            catch (...) {
+                log() << "unknown exception while verify user\n";
+                delete user;
+                goto done;
+            }
+
+            break;
+
+        //exit the loop
+        case COMMAND_EXIT:
+          log() << " got exit cmd\n";
+            goto done;
+
+        case -1:
+          log() << " read error on command channel (cmd = -1)."<< endl;
+          break;
+
+        default:
+          log() << " unknown command code: code = " << command << ", exiting.\n";
+          goto done;
+        }
     }
  done:
 
-  if (1)
-    cerr << getTime() << "RADIUS-PLUGIN: BACKGROUND AUTH: EXIT\n";
-  return;
+    log() << " EXIT\n";
+    return;
 }
 

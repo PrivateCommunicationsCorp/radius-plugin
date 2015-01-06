@@ -4,7 +4,7 @@ INCL=
 
 LIBS=-lgcrypt -lpthread
 CXXFLAGS ?= -O2 -g
-CXXFLAGS +=-Wall -shared -fPIC -DPIC
+CXXFLAGS += -Wall -shared -fPIC -DPIC
 
 
 PLUGIN=radiusplugin.so
