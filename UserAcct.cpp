@@ -426,94 +426,94 @@ int UserAcct::sendStopPacket(PluginContext * context)
     //get the server from the config
     serverlist=context->radiusconf.getRadiusServer();
     if(!serverlist) {
-      log() << " radius server addresses corrupted or not inited" << "\n";
+      log() << "radius server addresses corrupted or not inited\n";
     }
     //set server to the first server
     server=serverlist->begin();
 
     //add the attributes to the packet
     if(packet.addRadiusAttribute(&ra1)) {
-      log() << " Fail to add attribute ATTRIB_User_Name.\n";
+      log() << "Fail to add attribute ATTRIB_User_Name.\n";
     }
 
     if (packet.addRadiusAttribute(&ra2)) {
-      log() << " Fail to add attribute ATTRIB_FramedIP_Address.\n";
+      log() << "Fail to add attribute ATTRIB_FramedIP_Address.\n";
     }
     if (packet.addRadiusAttribute(&ra3)) {
-      log() << " Fail to add attribute ATTRIB_NAS_Port.\n";
+      log() << "Fail to add attribute ATTRIB_NAS_Port.\n";
     }
     if (packet.addRadiusAttribute(&ra4)) {
-      log() << " Fail to add attribute ATTRIB_Calling_Station_Id.\n";
+      log() << "Fail to add attribute ATTRIB_Calling_Station_Id.\n";
     }
 
     //get information from th config and ad it to the packet
     if(strcmp(context->radiusconf.getNASIdentifier(),"")) {
             ra5.setValue(context->radiusconf.getNASIdentifier());
             if (packet.addRadiusAttribute(&ra5)) {
-              log() << " Fail to add attribute ATTRIB_NAS_Identifier.\n";
+              log() << "Fail to add attribute ATTRIB_NAS_Identifier.\n";
             }
     }
 
     if(strcmp(context->radiusconf.getNASIpAddress(),"")) {
             if(ra6.setValue(context->radiusconf.getNASIpAddress())!=0) {
-              log() << " Fail to set value ATTRIB_NAS_Ip_Address.\n";
+              log() << "Fail to set value ATTRIB_NAS_Ip_Address.\n";
             }
             else if (packet.addRadiusAttribute(&ra6))
             {
-              log() << " Fail to add attribute ATTRIB_NAS_Ip_Address.\n";
+              log() << "Fail to add attribute ATTRIB_NAS_Ip_Address.\n";
             }
     }
     if(strcmp(context->radiusconf.getNASPortType(),"")) {
             ra7.setValue(context->radiusconf.getNASPortType());
             if (packet.addRadiusAttribute(&ra7)) {
-              log() << " Fail to add attribute ATTRIB_NAS_Port_Type.\n";
+              log() << "Fail to add attribute ATTRIB_NAS_Port_Type.\n";
             }
     }
 
     if(strcmp(context->radiusconf.getServiceType(),"")) {
             ra8.setValue(context->radiusconf.getServiceType());
             if (packet.addRadiusAttribute(&ra8)) {
-              log() << " Fail to add attribute ATTRIB_Service_Type.\n";
+              log() << "Fail to add attribute ATTRIB_Service_Type.\n";
             }
     }
     if (packet.addRadiusAttribute(&ra9)) {
-      log() << " Fail to add attribute ATTRIB_Acct_Session_ID.\n";
+      log() << "Fail to add attribute ATTRIB_Acct_Session_ID.\n";
     }
     if (packet.addRadiusAttribute(&ra10)) {
-      log() << " Fail to add attribute ATTRIB_Acct_Session_ID.\n";
+      log() << "Fail to add attribute ATTRIB_Acct_Session_ID.\n";
     }
 
     if(strcmp(context->radiusconf.getFramedProtocol(),"")) {
             ra11.setValue(context->radiusconf.getFramedProtocol());
             if (packet.addRadiusAttribute(&ra11)) {
-              log() << " Fail to add attribute ATTRIB_Framed_Protocol.\n";
+              log() << "Fail to add attribute ATTRIB_Framed_Protocol.\n";
             }
     }
 
     if (packet.addRadiusAttribute(&ra12)) {
-      log() << " Fail to add attribute ATTRIB_Acct_Input_Packets.\n";
+      log() << "Fail to add attribute ATTRIB_Acct_Input_Packets.\n";
     }
     if (packet.addRadiusAttribute(&ra13)) {
-      log() << " Fail to add attribute ATTRIB_Acct_Output_Packets.\n";
+      log() << "Fail to add attribute ATTRIB_Acct_Output_Packets.\n";
     }
 
     //calculate the session time
     ra14.setValue(time(NULL)-this->starttime);
     if (packet.addRadiusAttribute(&ra14)) {
-      log() << " Fail to add attribute ATTRIB_Acct_Session_Time.\n";
+      log() << "Fail to add attribute ATTRIB_Acct_Session_Time.\n";
     }
 
     if (packet.addRadiusAttribute(&ra15)) {
-      log() << " Fail to add attribute ATTRIB_Acct_Input_Gigawords.\n";
+      log() << "Fail to add attribute ATTRIB_Acct_Input_Gigawords.\n";
     }
 
     if (packet.addRadiusAttribute(&ra16)) {
-      log() << " Fail to add attribute ATTRIB_Acct_Output_Gigawords.\n";
+      log() << "Fail to add attribute ATTRIB_Acct_Output_Gigawords.\n";
     }
 
     //send the packet
     if (packet.radiusSend(server)<0) {
-      log() << " Packet was not sent, trying to get response?." << "\n";
+      log() << "Packet was not sent, trying to get response?.\n";
       // return 1;
     }
 
@@ -523,14 +523,14 @@ int UserAcct::sendStopPacket(PluginContext * context)
     {
         //is it an accounting response
         if(packet.getCode()==ACCOUNTING_RESPONSE) {
-          log.debug() << " Get ACCOUNTING_RESPONSE-Packet.\n";
+          log.debug() << "Get ACCOUNTING_RESPONSE-Packet.\n";
           return 0;
         } else {
-          log.debug() << " No response on accounting request.\n";
+          log.debug() << "No response on accounting request.\n";
           return 1;
         }
     } else {
-      log() << " Fail to receive radius response, code: " <<  resCode << endl;
+      log() << "Fail to receive radius response, code: " <<  resCode << endl;
     }
     return 1;
 }
@@ -555,13 +555,15 @@ void UserAcct::delSystemRoutes(PluginContext * context)
     //copy the framed route string to an char array, it is easier to
     //analyse
     try{
-      framedroutes=new char[this->getFramedRoutes().size()+1];
+      framedroutes=new char[this->getFramedRoutes().size() + 1];
     }
     catch(std::exception &e) {
-      log() << "Failed to allocate memory for frameroutes: " << e.what() << "\n";
+      log() << "Failed while allocate memory for frameroutes: " << e.what() << "\n";
+      return;
     }
     catch(...) {
-      log() << "Failed to allocate memory for frameroutes\n";
+      log() << "Failed while allocate memory for frameroutes\n";
+      return;
     }
     memset(framedroutes,0,this->getFramedRoutes().size()+1);
 
@@ -698,9 +700,13 @@ void UserAcct::addSystemRoutes(PluginContext * context)
     try{
       framedroutes=new char[this->getFramedRoutes().size()+1];
     }
-    catch(...)
-    {
-      log.debug() << " Memory allocation failed for framedroutes." << endl;
+    catch(std::exception &e) {
+      log() << "Failed while allocate memory for frameroutes: " << e.what() << "\n";
+      return;
+    }
+    catch(...) {
+      log() << " Failed while allocate memory for framedroutes.\n";
+      return;
     }
     memset(framedroutes,0,this->getFramedRoutes().size()+1);
 

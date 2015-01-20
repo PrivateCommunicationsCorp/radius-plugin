@@ -1,7 +1,7 @@
 /*
- *  radiusplugin -- An OpenVPN plugin for do radius authentication 
- *					and accounting.
- * 
+ *  radiusplugin -- An OpenVPN plugin for do radius authentication
+ *                  and accounting.
+ *
  *  Copyright (C) 2005 EWE TEL GmbH/Ralf Luebben <ralfluebben@gmx.de>
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -18,7 +18,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
- 
+
 #include "PluginContext.h"
 
 
@@ -27,28 +27,28 @@
  * verbosity level are set to 0. The session id is set to to 1.*/
 PluginContext::PluginContext()
 {
-	
-  	this->authsocketforegr.setSocket(-1);
-  	this->authsocketbackgr.setSocket(-1);
-	this->acctsocketforegr.setSocket(-1);
-	this->acctsocketbackgr.setSocket(-1);
-  	
-  	this->authpid=0;
-  	this->acctpid=0;
- 	
-  	this->verb=0;
-  	this->sessionid=1;
+
+    this->authsocketforegr.setSocket(-1);
+    this->authsocketbackgr.setSocket(-1);
+    this->acctsocketforegr.setSocket(-1);
+    this->acctsocketbackgr.setSocket(-1);
+
+    this->authpid=0;
+    this->acctpid=0;
+
+    this->verb=0;
+    this->sessionid=1;
 
         this->stopthread=false;
-	this->startthread=true;
+    this->startthread=true;
 }
 
 /** The destructor clears the users and nasportlist.*/
 PluginContext::~PluginContext()
 {
-	this->users.clear();
-	this->nasportlist.clear();
-	
+    this->users.clear();
+    this->nasportlist.clear();
+
 }
 
 /** The method searches the first free nas port in a list.
@@ -56,37 +56,37 @@ PluginContext::~PluginContext()
  */
 int PluginContext::addNasPort(void)
 {
-	int newport=0;
-	list<int>::iterator i;
-	list<int>::iterator j;
-	i=nasportlist.begin();
-	j=nasportlist.end();
-	
-	if (this->nasportlist.empty())
-	{
-		newport=1;
-		this->nasportlist.push_front(newport);
-	}
-	
-	else
-	{
-		newport=1;
-		while( i != this->nasportlist.end()) 
-		{
-		    if (newport < *i)
-		    {
-		    	j=i;
-		    	i=this->nasportlist.end();
-		    }
-		    else
-		    {
-		    	i++;
-		    	newport++;
-		    }
-		}
-		this->nasportlist.insert(j, newport);
-	}
-	return newport;
+    int newport=0;
+    list<int>::iterator i;
+    list<int>::iterator j;
+    i=nasportlist.begin();
+    j=nasportlist.end();
+
+    if (this->nasportlist.empty())
+    {
+        newport=1;
+        this->nasportlist.push_front(newport);
+    }
+
+    else
+    {
+        newport=1;
+        while( i != this->nasportlist.end())
+        {
+            if (newport < *i)
+            {
+                j=i;
+                i=this->nasportlist.end();
+            }
+            else
+            {
+                i++;
+                newport++;
+            }
+        }
+        this->nasportlist.insert(j, newport);
+    }
+    return newport;
 }
 
 /**The method deletes the nas port from the list.
@@ -94,7 +94,7 @@ int PluginContext::addNasPort(void)
  */
 void PluginContext::delNasPort(int num)
 {
-	this->nasportlist.remove(num);
+    this->nasportlist.remove(num);
 }
 
 /**The method adds an user to the user map of the foreground
@@ -104,19 +104,15 @@ void PluginContext::delNasPort(int num)
  */
 void PluginContext::addUser(UserPlugin * newuser)
 {
-	pair<map<string,UserPlugin *>::iterator,bool> success;
-	
-	success=users.insert(make_pair(newuser->getKey(),newuser));
-	
-	if(success.second==false)
-	{
-		throw Exception(Exception::ALREADYAUTHENTICATED);
-	}
-	else
-	{
-		this->sessionid++;
-	}
-	
+    pair<map<string,UserPlugin *>::iterator,bool> success;
+
+    success = users.insert(make_pair(newuser->getKey(), newuser));
+    if(!success.second) {
+        throw Exception(Exception::ALREADYAUTHENTICATED);
+    }
+    else {
+      ++this->sessionid;
+    }
 }
 
 /**The method deletes the user from the map with the key.
@@ -124,21 +120,20 @@ void PluginContext::addUser(UserPlugin * newuser)
  */
 void PluginContext::delUser(string key)
 {
-	users.erase(key);	
+    users.erase(key);
 }
 
 /**The method finds a user in the user map.
  * @param key The key of the user.
  * @return A pointer to the user.
  */
-UserPlugin * PluginContext::findUser(string key)
+UserPlugin * PluginContext::findUser(const std::string &key)
 {
-	map<string,UserPlugin *>::iterator iter =  users.find(key);
-	if (iter != users.end())
-	{
-		return iter->second;
-	}
-	return NULL;
+    map<string,UserPlugin *>::iterator iter =  users.find(key);
+    if (iter != users.end()) {
+        return iter->second;
+    }
+    return NULL;
 }
 
 
@@ -147,7 +142,7 @@ UserPlugin * PluginContext::findUser(string key)
  */
 int PluginContext::getVerbosity(void)
 {
-	return this->verb;
+    return this->verb;
 }
 
 /** The setter method for the verbosisty level.
@@ -155,7 +150,7 @@ int PluginContext::getVerbosity(void)
  */
 void PluginContext::setVerbosity(int v)
 {
-	this->verb=v;
+    this->verb=v;
 }
 
 /** The getter method for the authentication
@@ -163,8 +158,8 @@ void PluginContext::setVerbosity(int v)
  * @returns The process id.
  */
 pid_t PluginContext::getAuthPid(void)
-{				
-	return this->authpid;
+{
+    return this->authpid;
 }
 
 /** The setter method for the authentication
@@ -173,25 +168,25 @@ pid_t PluginContext::getAuthPid(void)
  */
 void PluginContext::setAuthPid(pid_t p)
 {
-	this->authpid=p;
-} 
+    this->authpid=p;
+}
 
 /** The getter method for the accounting
  * background process id.
  * @returns The process id.
- */	
+ */
 pid_t PluginContext::getAcctPid(void)
 {
-	return this->acctpid;
-}	
+    return this->acctpid;
+}
 
 /** The setter method for the accounting
  * background process id.
  * @param The process id.
- */		
+ */
 void PluginContext::setAcctPid(pid_t p)
 {
-	this->acctpid=p;
+    this->acctpid=p;
 }
 
 
@@ -200,7 +195,7 @@ void PluginContext::setAcctPid(pid_t p)
  */
 int PluginContext::getSessionId(void)
 {
-	return this->sessionid;
+    return this->sessionid;
 }
 
 
@@ -216,12 +211,12 @@ void PluginContext::addNewUser(UserPlugin * newuser)
  */
 UserPlugin * PluginContext::getNewUser()
 {
-    
-    
-      UserPlugin * user = this->newusers.front();
-      this->newusers.pop_front();
-      return user;
-	
+  if(this->newusers.empty()) {
+    return NULL;
+  }
+  UserPlugin * user = this->newusers.front();
+  this->newusers.pop_front();
+  return user;
 }
 
 pthread_cond_t  * PluginContext::getCondSend(void )
@@ -255,7 +250,7 @@ int PluginContext::getResult()
 }
 
 void PluginContext::setResult(int r)
-{ 
+{
   result=r;
 }
 
@@ -263,7 +258,7 @@ bool PluginContext::UserWaitingtoAuth()
 {
   if (this->newusers.size()>0) return true;
   else return false;
-} 
+}
 
 
 bool PluginContext::getStopThread()

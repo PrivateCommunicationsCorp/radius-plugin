@@ -63,7 +63,7 @@ extern "C"
     int                     fd_acct[2]; /**<An array for the socket pair of the accounting process.*/
     AccountingProcess       Acct;       /**<The accounting background process object.*/
     AuthenticationProcess   Auth;       /**<The authentication background process object.*/
-    PluginContext *context;        /**<The context for this
+    PluginContext *context = NULL;        /**<The context for this
                                          * functions.*/
     StdLogger log("RADIUS-PLUGIN [PLUGIN-OPEN]");
     try {
@@ -71,9 +71,11 @@ extern "C"
     }
     catch(std::exception &e) {
       log() << "Fail to create context object while init plugins (" << e.what() << ")\n";
+      return NULL;
     }
     catch(...) {
       log() << "Fail to create context object while init plugins\n";
+      return NULL;
     }
     // Get verbosity level from the environment.
     const char *verb_string = get_env ( "verb", envp );
@@ -332,18 +334,27 @@ extern "C"
 
     if (context->getStartThread())
     {
-
       pthread_cond_init (context->getCondSend(), NULL);
       pthread_mutex_init (context->getMutexSend(), NULL);
       pthread_cond_init (context->getCondRecv(), NULL);
       pthread_mutex_init (context->getMutexRecv(), NULL);
 
-      if (context->conf.getAccountingOnly()==false && pthread_create(context->getThread(), NULL, &auth_user_pass_verify, (void *) context) != 0)
+      if (context->conf.getAccountingOnly() == false &&
+          pthread_create(context->getThread(), NULL, &auth_user_pass_verify, (void *) context) != 0)
       {
-        cerr << getTime() << "RADIUS-PLUGIN: Thread creation failed.\n";
+        cerr << getTime() << "RADIUS-PLUGIN: Auth thread creation failed.\n";
         return OPENVPN_PLUGIN_FUNC_ERROR;
-        //goto error;
+        // goto error;
       }
+      if(DEBUG(context->getVerbosity())) {
+        std::cerr << getTime() << "RADIUS-PLUGIN ["
+                  << "0x" << std::noshowbase << std::hex << std::setw(12) << std::setfill('0')
+                  << (long)getpid() << "]"
+                  << ": Auth thread created. ["
+                  << "0x" << std::noshowbase << std::hex << std::setw(12) << std::setfill('0')
+                  << (long)context->getThread() << "]\n" << std::dec;
+      }
+
       pthread_mutex_lock(context->getMutexRecv());
       context->setStartThread(false);
       pthread_mutex_unlock(context->getMutexRecv());
@@ -355,21 +366,19 @@ extern "C"
     string common_name;         /**<A string for the common_name from the environment.*/
     string untrusted_ip;            /** untrusted_ip for ipv6 support **/
 
-
     ///////////// OPENVPN_PLUGIN_AUTH_USER_PASS_VERIFY
     if ( type == OPENVPN_PLUGIN_AUTH_USER_PASS_VERIFY && ( context->authsocketbackgr.getSocket() ) >= 0 )
     {
-
-      if ( DEBUG ( context->getVerbosity() ) )
-      {
-        cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND: OPENVPN_PLUGIN_AUTH_USER_PASS_VERIFY is called."<< endl;
+      if ( DEBUG ( context->getVerbosity() ) ) {
+        cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND: OPENVPN_PLUGIN_AUTH_USER_PASS_VERIFY is called.\n";
       }
 
       try
       {
         newuser=new UserPlugin();
         get_user_env(context,type,envp, newuser);
-        if (newuser->getAuthControlFile().length() > 0 && context->conf.getUseAuthControlFile())
+        if (newuser->getAuthControlFile().length() > 0 &&
+            context->conf.getUseAuthControlFile())
         {
           pthread_mutex_lock(context->getMutexSend());
           context->addNewUser(newuser);
@@ -395,24 +404,21 @@ extern "C"
       {
         cerr << getTime() << e;
       }
-      catch (std::bad_alloc)
+      catch (std::exception &e)
       {
-        cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND: New failed on UserPlugin in OPENVPN_PLUGIN_AUTH_USER_PASS_VERIFY" << endl;
+        cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND: Exception in OPENVPN_PLUGIN_AUTH_USER_PASS_VERIFY: "
+             << e.what() << "\n";
       }
       catch ( ... )
       {
         cerr << getTime() << "Unknown Exception!";
-
       }
       return OPENVPN_PLUGIN_FUNC_ERROR;
       /////////////////////////// CLIENT_CONNECT
     }
     if ( type == OPENVPN_PLUGIN_CLIENT_CONNECT && context->acctsocketbackgr.getSocket() >= 0 )
     {
-
-
-      if ( DEBUG ( context->getVerbosity() ) )
-      {
+      if ( DEBUG ( context->getVerbosity() ) ) {
         cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND: OPENVPN_PLUGIN_CLIENT_CONNECT is called.\n";
       }
 
@@ -440,8 +446,9 @@ extern "C"
             throw Exception ( "RADIUS-PLUGIN: FOREGROUND: User should be accounted but is unknown, should only occur if accountingonly=true.\n" );
           }
         }
-        else
+        else {
           delete(tmpuser);
+        }
 
         //set the assigned ip as Framed-IP-Attribute of the user (see RFC2866, chapter 4.1 for more information)
         if (get_env ( "ifconfig_pool_remote_ip", envp ) !=NULL)
@@ -489,7 +496,7 @@ extern "C"
             //free the nasport
             context->delNasPort ( newuser->getPortnumber() );
             string error;
-            error="RADIUS-PLUGIN: FOREGROUND: Accounting failed for user:";
+            error="RADIUS-PLUGIN: FOREGROUND: OPENVPN_PLUGIN_CLIENT_CONNECT: Accounting failed for user:";
             error+=newuser->getUsername();
             error+="!\n";
             //delete user from context
@@ -499,27 +506,22 @@ extern "C"
         }
         else
         {
-
           string error;
           error="RADIUS-PLUGIN: FOREGROUND: No user with this commonname or he is already authenticated: ";
           error+=common_name;
           error+="!\n";
           throw Exception ( error );
-
         }
       }
-      catch ( Exception &e )
-      {
+      catch ( Exception &e ) {
         cerr << getTime() << e;
       }
-      catch (std::bad_alloc)
-      {
-        cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND: New failed on UserPlugin in OPENVPN_PLUGIN_CLIENT_CONNECT" << endl;
+      catch (std::exception &e) {
+        cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND: Exception while do OPENVPN_PLUGIN_CLIENT_CONNECT: "
+             << e.what() << "\n";
       }
-      catch ( ... )
-      {
-        cerr << getTime() << "Unknown Exception!";
-
+      catch ( ... ) {
+        cerr << getTime() << "Unknown Exception while do OPENVPN_PLUGIN_CLIENT_CONNECT:!";
       }
       return OPENVPN_PLUGIN_FUNC_ERROR;
     }
@@ -528,10 +530,7 @@ extern "C"
 
     if ( type == OPENVPN_PLUGIN_CLIENT_DISCONNECT && context->acctsocketbackgr.getSocket() >= 0 )
     {
-
-
-      if ( DEBUG ( context->getVerbosity() ) )
-      {
+      if ( DEBUG ( context->getVerbosity() ) ) {
         cerr << getTime() << "\n\nRADIUS-PLUGIN: FOREGROUND: OPENVPN_PLUGIN_CLIENT_DISCONNECT is called.\n";
       }
       try
@@ -545,10 +544,8 @@ extern "C"
         delete(tmpuser);
         if ( newuser!=NULL )
         {
-
           if ( DEBUG ( context->getVerbosity() ) )
             cerr << getTime() <<  "RADIUS-PLUGIN: FOREGROUND: Delete user from accounting: commonname: " << newuser->getKey() << "\n";
-
 
           //send the information to the background process
           context->acctsocketbackgr.send ( DEL_USER );
@@ -575,30 +572,23 @@ extern "C"
 
             //delete user from context
             context->delUser ( newuser->getKey() );
-            cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND: Error in ACCT Background Process!\n";
-
+            cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND: OPENVPN_PLUGIN_CLIENT_DISCONNECT: Error in ACCT Background Process!\n";
           }
-
         }
-        else
-        {
-          throw Exception ( "No user with this common_name!\n" );
-
+        else {
+          throw Exception ( "OPENVPN_PLUGIN_CLIENT_DISCONNECT: No user with this common_name!\n" );
         }
       }
-      catch ( Exception &e )
-      {
+      catch ( Exception &e ) {
         cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND:" << e;
       }
-      catch (std::bad_alloc)
-      {
-        cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND: New failed on UserPlugin in OPENVPN_PLUGIN_CLIENT_DISCONNECT" << endl;
+      catch (std::exception &e) {
+        cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND: Exception while OPENVPN_PLUGIN_CLIENT_DISCONNECT: "
+             << e.what() << "\n";
       }
-      catch ( ... )
-      {
-        cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND:" << "Unknown Exception!\n";
+      catch ( ... ) {
+        cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND: OPENVPN_PLUGIN_CLIENT_DISCONNECT: Unknown Exception!\n";
       }
-
     }
 
     return OPENVPN_PLUGIN_FUNC_ERROR;
@@ -880,10 +870,13 @@ void  * auth_user_pass_verify(void * c)
 
   while (!context->getStopThread())
   {
+    try{
     if (context->UserWaitingtoAuth()==false)
     {
-      if ( DEBUG ( context->getVerbosity() ) ) cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Waiting for new user." << endl;
-      cout.flush();
+      if ( DEBUG ( context->getVerbosity() ) ) {
+        cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Waiting for new user." << endl;
+      }
+      cout.flush(); cerr.flush();
       pthread_mutex_lock(context->getMutexSend());
       pthread_cond_wait(context->getCondSend(),context->getMutexSend());
       pthread_mutex_unlock(context->getMutexSend());
@@ -895,10 +888,13 @@ void  * auth_user_pass_verify(void * c)
     }
     if ( DEBUG ( context->getVerbosity() ) ) cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: New user from OpenVPN!" << endl;
     //is the user already known?
-    UserPlugin  *olduser=NULL;  /**<A context for an already known user.*/
-    UserPlugin  *newuser=NULL;  /**<A context for the new user.*/
+    UserPlugin  *olduser;  /**<A context for an already known user.*/
+    UserPlugin  *newuser;  /**<A context for the new user.*/
     newuser = context->getNewUser();
-    olduser=context->findUser ( newuser->getKey() );
+    if(!newuser) {
+      continue;
+    }
+    olduser = context->findUser(newuser->getKey());
 
     if ( olduser!=NULL )  //probably key renegotiation
     {
@@ -908,16 +904,18 @@ void  * auth_user_pass_verify(void * c)
              << "\nRADIUS-PLUGIN: FOREGROUND THREAD:\t olduser port: " << olduser->getUntrustedPort()
              << "\nRADIUS-PLUGIN: FOREGROUND THREAD:\t olduser FramedIP: " << olduser->getFramedIp()
              << "\nRADIUS-PLUGIN: FOREGROUND THREAD:\t newuser ip: " << olduser->getCallingStationId()
-             << "\nRADIUS-PLUGIN: FOREGROUND THREAD:\t newuser port: " << olduser->getUntrustedPort()
-             << "\n";
-      cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: isAuthenticated()" <<  olduser->isAuthenticated();
-      cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: isAcct()" <<  olduser->isAccounted();
+             << "\nRADIUS-PLUGIN: FOREGROUND THREAD:\t newuser port: " << olduser->getUntrustedPort();
+      cerr << getTime() << "\nRADIUS-PLUGIN: FOREGROUND THREAD: isAuthenticated() == " <<  olduser->isAuthenticated();
+      cerr << getTime() << "\nRADIUS-PLUGIN: FOREGROUND THREAD: isAcct() == " <<  olduser->isAccounted();
+      std::cerr << "\n";
       // update password and username, can happen when a new connection is established from the same client with the same port before the timeout in the openvpn server occurs!
       olduser->setPassword(newuser->getPassword());
       olduser->setUsername(newuser->getUsername());
       olduser->setAuthControlFile(newuser->getAuthControlFile());
       //delete the newuser and use the olduser
-      delete newuser;
+      if(newuser) {
+        delete newuser;
+      }
       newuser=olduser;
       //TODO: for threading check if the user is already accounted (He must be for renegotiation)
     }
@@ -926,12 +924,13 @@ void  * auth_user_pass_verify(void * c)
       cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: New user." << endl;
       newuser->setPortnumber ( context->addNasPort() );
       newuser->setSessionId ( createSessionId ( newuser ) );
-      //add the user to the context
-      context->addUser(newuser);
+      // add the user to the context
+      context->addUser(newuser);  // GENERATE EXCEPTION if failes !!!
     }
 
     if ( DEBUG ( context->getVerbosity() ) )
-      cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: New user: username: "<< newuser->getUsername()  <<", password: *****"
+      cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: New user: username: "
+           << newuser->getUsername()  <<", password: *****"
            << ", newuser ip: " << newuser->getCallingStationId()
            << ", newuser port: " << newuser->getUntrustedPort() << " ." << endl;
 
@@ -953,16 +952,18 @@ void  * auth_user_pass_verify(void * c)
       if ( status == RESPONSE_SUCCEEDED )
       {
         if ( DEBUG ( context->getVerbosity() ) )
-          cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Authentication succeeded!" << endl;
+          cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Authentication succeeded!\n";
 
         //get the routes from background process
         newuser->setFramedRoutes ( context->authsocketbackgr.recvStr() );
         if ( DEBUG ( context->getVerbosity() ) )
-          cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Received routes for user: "<< newuser->getFramedRoutes() << "." << endl;
+          cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Received routes for user: "
+               << newuser->getFramedRoutes() << ".\n";
         //get the framed ip
         newuser->setFramedIp ( context->authsocketbackgr.recvStr() );
         if ( DEBUG ( context->getVerbosity() ) )
-          cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Received framed ip for user: "<< newuser->getFramedIp() << "." << endl;
+          cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Received framed ip for user: "
+               << newuser->getFramedIp() << ".\n";
 
 
         // get the interval from the background process
@@ -1005,9 +1006,7 @@ void  * auth_user_pass_verify(void * c)
 
           pthread_cond_signal( context->getCondRecv( ));
           pthread_mutex_unlock (context->getMutexRecv());
-
         }
-
       }
       else //AUTH failed
       {
@@ -1024,16 +1023,16 @@ void  * auth_user_pass_verify(void * c)
           if ( status == RESPONSE_SUCCEEDED )
           {
             if ( DEBUG ( context->getVerbosity() ) )
-              cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Accounting for user with key" << newuser->getKey()  << " stopped!" << endl;
+              cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Accounting for user with key" << newuser->getKey()  << " stopped!\n";
           }
           else
           {
-            cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Error in ACCT Background Process!" << endl;
-            cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: User is deleted from the user map!" << endl;
+            cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Error in ACCT Background Process!\n";
+            cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: User is deleted from the user map!\n";
           }
         }
         cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Error receiving auth confirmation from background process." << endl;
-        //clean up: nas port, context, memory
+        // clean up: nas port, context, memory
         context->delNasPort(newuser->getPortnumber());
         context->delUser(newuser->getKey());
 
@@ -1073,8 +1072,22 @@ void  * auth_user_pass_verify(void * c)
       delete newuser;
     }
   }
+    catch(std::exception &e) {
+      cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Got exception: " << e.what() << "\n";
+      break;
+    }
+    catch(Exception &e) {
+      cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Got exception: " << e << "\n";
+      break;
+    }
+    catch(...) {
+      cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Got unknown exception\n";
+      break;
+    }
+  }
   pthread_mutex_unlock(context->getMutexSend());
   cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Thread finished.\n";
+  context->setStartThread(false);
   pthread_exit(NULL);
 }
 
@@ -1215,9 +1228,9 @@ const char* StdLogger::date_fmt_ = "%a %b %d %T %Y";
 
 
 StdLogger::StdLogger(const std::string &log_tag, int cur_verbosity)
-  : tag_(" " + log_tag + ": "), log(std::cerr), verb_(cur_verbosity),
+  : tag_(" " + log_tag + ": "), verb_(cur_verbosity),
     debug_allowed_(logVerbThreshold <= cur_verbosity),
-    null_out_(NULL)
+    log_(std::cerr), null_out_(NULL)
 {
   null_out_.setstate(std::ios_base::badbit);
 }
@@ -1225,7 +1238,7 @@ StdLogger::StdLogger(const std::string &log_tag, int cur_verbosity)
 
 StdLogger::~StdLogger()
 {
-  log.flush();
+  log_.flush();
 }
 
 
@@ -1238,8 +1251,8 @@ void StdLogger::init_verbosity(int cur_verbosity)
 
 std::ostream &StdLogger::operator()()
 {
-  log << time_() << tag_;
-  return log;
+  log_ << time_() << tag_;
+  return log_;
 }
 
 
@@ -1254,7 +1267,7 @@ std::ostream &StdLogger::debug()
 
 void StdLogger::flush()
 {
-  log.flush();
+  log_.flush();
 }
 
 

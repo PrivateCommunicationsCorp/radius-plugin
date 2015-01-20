@@ -32,9 +32,9 @@
 
 void AccountingProcess::Accounting(PluginContext * context)
 {
-  UserAcct              *user=NULL; //The user for acconting.
-  int                   command,    //The command from foreground process.
-    result;     //The result from the socket.
+  UserAcct              *user = NULL; // The user for acconting.
+  int                   command,      // The command from foreground process.
+                        result;       // The result from the socket.
   string                    key;        //The unique key.
   AcctScheduler             scheduler;  //The scheduler for the accounting.
   fd_set                set;        //A set for the select function.
@@ -97,13 +97,8 @@ void AccountingProcess::Accounting(PluginContext * context)
             log() << "send nonfatal success response\n";
             context->acctsocketforegr.send(RESPONSE_SUCCEEDED);
           }
-          try{
-            //allocate memory
-            user = new UserAcct;
-          }
-          catch(...) {
-            log() << " Memory allocation failed for UserAcct." << endl;
-          }
+          UserAcct new_user;
+          user = &new_user;
           //get the information from the foreground process
           try {
             user->setUsername(context->acctsocketforegr.recvStr());
@@ -161,7 +156,7 @@ void AccountingProcess::Accounting(PluginContext * context)
             }
 
             //add the user to the scheduler
-            scheduler.addUser(user);
+            scheduler.addUser(*user);
             //send the ok to the parent process
             if(context->conf.getNonFatalAccounting()==false) {
               log() << "send non nonfatal success response\n";
@@ -206,7 +201,6 @@ void AccountingProcess::Accounting(PluginContext * context)
           }
           log() << "Unknown Exception!\n";
         }
-        delete user;
         break;
 
         //delete a user
@@ -240,7 +234,7 @@ void AccountingProcess::Accounting(PluginContext * context)
         }
 
         //find the user, he must be already there
-        user=scheduler.findUser(key.c_str());
+        user=scheduler.findUser(key);
 
         if (user)
         {

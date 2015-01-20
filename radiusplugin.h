@@ -141,7 +141,7 @@ private:
   bool debug_allowed_;
   char buf_[time_buf_len_];
 
-  std::ostream &log;
+  std::ostream &log_;
   std::ostream null_out_;
 
   const char *time_();

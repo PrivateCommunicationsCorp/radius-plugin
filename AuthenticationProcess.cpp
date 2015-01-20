@@ -70,11 +70,11 @@ void AuthenticationProcess::Authentication(PluginContext * context)
         {
         //authenticate the user
         case COMMAND_VERIFY:
-          log.debug() << " verifying user\n";
-            //allcoate memory for the new user
             try
             {
-                user=new UserAuth;
+              log.debug() << " verifying user\n";
+              UserAuth new_user;
+              user = &new_user;
                 //get the user informations
                 user->setUsername(context->authsocketforegr.recvStr());
                 user->setPassword(context->authsocketforegr.recvStr());
@@ -129,7 +129,6 @@ void AuthenticationProcess::Authentication(PluginContext * context)
                     context->authsocketforegr.send(user->getVsaBuf(), user->getVsaBufLen());
 
                     //free user_context_auth
-                    delete user;
                     log.debug() << " Auth succeeded in radius_server().\n";
                 }
                 else /* Failed */ {
@@ -138,13 +137,8 @@ void AuthenticationProcess::Authentication(PluginContext * context)
                   throw Exception("Auth failed!");
                 }
             }
-            catch(std::bad_alloc){
-              log() << " memory allocation failed. while verify user" << endl;
-              goto done;
-            }
             catch (Exception &e) {
                 log() << " failed while verify user: " << e << "\n";
-                delete user;
                 if (e.getErrnum()==Exception::SOCKETSEND || e.getErrnum()==Exception::SOCKETRECV) {
                     log() << " socket error while verify user(critical)\n";
                     goto done;
@@ -152,11 +146,9 @@ void AuthenticationProcess::Authentication(PluginContext * context)
             }
             catch (std::exception &e) {
               log() << " failed while verify user: " << e.what() << "\n";
-              delete user;
             }
             catch (...) {
                 log() << "unknown exception while verify user\n";
-                delete user;
                 goto done;
             }
 

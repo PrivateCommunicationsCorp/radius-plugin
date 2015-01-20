@@ -49,17 +49,17 @@ AcctScheduler::~AcctScheduler()
  * without this interval is added to passiveuserlist.
  * @param user A pointer to an object from the class UserAcct.
  */
-void AcctScheduler::addUser(UserAcct *user)
+void AcctScheduler::addUser(const UserAcct &user)
 {
   StdLogger log("RADIUS-PLUGIN [PLUGIN-ADDUSR]");
   std::pair<std::map<string, UserAcct>::iterator,bool> res;
-  if (user->getAcctInterimInterval()==0) {
-    res = this->passiveuserlist.insert(make_pair(user->getKey(),*user));
+  if (user.getAcctInterimInterval()==0) {
+    res = this->passiveuserlist.insert(make_pair(user.getKey(),user));
   } else {
-    res = this->activeuserlist.insert(make_pair(user->getKey(),*user));
+    res = this->activeuserlist.insert(make_pair(user.getKey(),user));
   }
   if(!res.second) {
-    log() << "Fail to add user (key='" << user->getKey() << "') to any map!" << "\n";
+    log() << "Fail to add user (key='" << user.getKey() << "') to any map!" << "\n";
   }
 }
 
@@ -148,7 +148,7 @@ void AcctScheduler::doAccounting(PluginContext * context)
     map<string, UserAcct>::iterator iter1, iter2;
 
     StdLogger log("RADIUS-PLUGIN [PLUGIN-ACCTUPD-ALL]", context->getVerbosity());
-    log.debug() << "preparing...\n";
+    // log.debug() << "preparing...\n";
 
     iter1=activeuserlist.begin();
     iter2=activeuserlist.end();

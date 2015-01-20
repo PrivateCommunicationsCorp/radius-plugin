@@ -55,7 +55,7 @@ public:
     AcctScheduler();
     ~AcctScheduler();
 
-    void addUser(UserAcct *user);
+    void addUser(const UserAcct &user);
     void delUser(PluginContext * context, UserAcct *user);
     void delallUsers(PluginContext * context);
 
