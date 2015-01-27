@@ -347,10 +347,10 @@ extern "C"
         // goto error;
       }
       if(DEBUG(context->getVerbosity())) {
-        std::cerr << getTime() << "RADIUS-PLUGIN ["
+        std::cerr << getTime() << "RADIUS-PLUGIN (" << std::dec << (long)getpid() << ")["
                   << "0x" << std::noshowbase << std::hex << std::setw(12) << std::setfill('0')
                   << (long)getpid() << "]"
-                  << ": Auth thread created. ["
+                  << ": Auth thread created. (" << std::dec << (long)context->getThread() << ")["
                   << "0x" << std::noshowbase << std::hex << std::setw(12) << std::setfill('0')
                   << (long)context->getThread() << "]\n" << std::dec;
       }
