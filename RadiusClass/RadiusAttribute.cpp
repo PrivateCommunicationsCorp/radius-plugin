@@ -36,6 +36,7 @@ RadiusAttribute::RadiusAttribute(void)
     this->value=NULL;
 }
 
+
 /** The constructor creates an attribute.
  * The type and the value can be set.
  * @param Octet type : The type of the attribute.
@@ -46,11 +47,11 @@ RadiusAttribute::RadiusAttribute(Octet ty, const char *value)
     this->type=ty;
     this->value=NULL;
     //Only set the value if there is something in.
-    if (value!=NULL)
-    {
+    if(value != NULL) {
         this->setValue(value);
     }
 }
+
 
 /**The construcotr sets the type. The value is set to NULL.
  * @param Octet typ :  The type of the attribute.*/
@@ -61,16 +62,18 @@ RadiusAttribute::RadiusAttribute(Octet typ)
     this->value=NULL;
 }
 
+
 /**The constructor sets the type and the value.
  * @param Octet typ : The type of the attribute.
  * @param string str : The value as a string.
  */
-RadiusAttribute::RadiusAttribute(Octet typ, string str)
+RadiusAttribute::RadiusAttribute(Octet typ, const std::string &str)
 {
     this->type=typ;
     this->value=NULL;
     this->setValue(str);
 }
+
 
 /** The constructor sets the type and the value. The type must
  * have the datatype integer as it is defined in the RFC of the
@@ -91,24 +94,22 @@ RadiusAttribute::RadiusAttribute(Octet typ, uint32_t value)
  */
 RadiusAttribute::~RadiusAttribute(void)
 {
-    if (this->value)
-    {
+    if (this->value) {
         delete [] this->value;
     }
 }
+
 
 /** Creates a dump of an attribute.
  */
 void RadiusAttribute::dumpRadiusAttrib(void)
 {
-    int     i;
-
     fprintf(stdout,"\ttype\t\t:\t%d\t|",this->type);
     fprintf(stdout,"\tlength\t:\t%d\t|",this->getLength());
     fprintf(stdout,"\tvalue\t:\t'");
-    for(i=0;i<((this->getLength())-2);i++)
+    for(int i = 0; i < ((this->getLength()) - 2); ++i) {
         fputc(this->value[i],stdout);
-
+    }
     fprintf(stdout,"'\n");
 }
 
@@ -116,7 +117,7 @@ void RadiusAttribute::dumpRadiusAttrib(void)
 /** The getter method for the length of the attribute
  * @return The length as an integer.
  */
-int RadiusAttribute::getLength(void)
+int RadiusAttribute::getLength(void) const
 {
     return (this->length);
 }
@@ -126,14 +127,16 @@ Octet * RadiusAttribute::getLength_Octet(void)
     return (&this->length);
 }
 
+
 /** The setter method for the length of the attribut.
  * Normally it calculated automatically.
  * @param len The length as datatype unsigned char (=Octet).
  */
 void RadiusAttribute::setLength(Octet len)
 {
-    this->length=len;
+    this->length = len;
 }
+
 
 /** Creates a password buffer with MD5/xOR hashing for the
  * ATTRIB_User_Password. The password filed must be have a
@@ -183,7 +186,7 @@ char * RadiusAttribute::makePasswordHash(const char *password,char * hpassword, 
     if (this->length<MD5_DIGEST_LENGTH)
     {
         //XOR the password and the digest
-        for(i=0;i<MD5_DIGEST_LENGTH;i++) hpassword[i]=password[i]^digest[i];
+        for(i=0;i<MD5_DIGEST_LENGTH;++i) hpassword[i]=password[i]^digest[i];
     }
     else
     {
@@ -247,14 +250,17 @@ char * RadiusAttribute::makePasswordHash(const char *password,char * hpassword, 
 /** The getter method for the type of the attribute.
  * @return An integer with the type.
  */
-int RadiusAttribute::getType(void)
+int RadiusAttribute::getType(void) const
 {
     return (this->type);
 }
+
+
 Octet * RadiusAttribute::getType_Octet(void)
 {
     return (&this->type);
 }
+
 
 /** The setter method for the type of the attribute.
  * @param type The type as Octet.
@@ -263,6 +269,7 @@ void RadiusAttribute::setType(Octet type)
 {
     this->type=type;
 }
+
 
 /** The getter method for the value.
  * @return The value as an Octet.*/
@@ -285,18 +292,16 @@ Octet * RadiusAttribute::getValue(void)
  * @return An integer which indicates errors, 0 if everthing is ok,
  * else a number defined in the error.h
  */
-
-int RadiusAttribute::setValue(char *value)
+int RadiusAttribute::setValue(const char *value)
 {
-  std::cerr << "[MEMDEBUG] " << __FILE__ << ":" << __LINE__ << " " << __func__ << "()\n";
     char            tmpStr[20];     //An array to convert the datatype.
     int             i,j,q,          //Some counter.
                     passwordlen;    //The passwordlength.
 
     //If the attribute has already an value, clear it.
-    if (this->value!=NULL)
-    {
+    if (this->value!=NULL) {
         delete [] this->value;
+        length = 0;
     }
 
     switch(this->type)
@@ -306,11 +311,9 @@ int RadiusAttribute::setValue(char *value)
         case    ATTRIB_Framed_IP_Address:
         case    ATTRIB_Framed_IP_Netmask:
         case    ATTRIB_Login_IP_Host:
-            //allocate memory
+          //allocate memory
           try {
-            if(!(this->value=new Octet[4])) {
-                return ALLOC_ERROR;
-            }
+            this->value=new Octet[4];
           } catch (...) {
             return ALLOC_ERROR;
           }
@@ -319,8 +322,9 @@ int RadiusAttribute::setValue(char *value)
             while(value[i]!='.' && i<3)
                 tmpStr[j++]=value[i++];
             tmpStr[j]=0;
-            if (value[i]!='.')
-            {
+            if (value[i]!='.') {
+              delete [] this->value;
+              this->value = NULL;
                 return BAD_IP;
             }
             this->value[0]=(unsigned char)atoi(tmpStr);
@@ -330,8 +334,9 @@ int RadiusAttribute::setValue(char *value)
             while(value[i]!='.' && i<7)
                 tmpStr[j++]=value[i++];
             tmpStr[j]=0;
-            if (value[i]!='.')
-            {
+            if (value[i]!='.') {
+              delete [] this->value;
+              this->value = NULL;
                 return BAD_IP;
             }
             this->value[1]=(unsigned char)atoi(tmpStr);
@@ -340,8 +345,9 @@ int RadiusAttribute::setValue(char *value)
             while(value[i]!='.' && i<11)
                 tmpStr[j++]=value[i++];
             tmpStr[j]=0;
-            if (value[i]!='.')
-            {
+            if (value[i]!='.') {
+              delete [] this->value;
+              this->value = NULL;
                 return BAD_IP;
             }
             this->value[2]=(unsigned char)atoi(tmpStr);
@@ -357,12 +363,9 @@ int RadiusAttribute::setValue(char *value)
         // User-Password
         case    ATTRIB_User_Password:
             //the minimum length is 16 Octets
-            if (strlen(value)<16)
-            {
+            if (strlen(value)<16) {
               try {
-                if(!(this->value=new Octet [16])) {
-                  return ALLOC_ERROR;
-                }
+                this->value = new Octet [16];
               } catch (...) {
                 return ALLOC_ERROR;
               }
@@ -370,26 +373,20 @@ int RadiusAttribute::setValue(char *value)
                 memcpy(this->value, value, strlen(value));
                 this->length=(Octet)16;
             }
-            //find a multiple of 16 Octets where the password fits
-            else
-            {
+            else { //find a multiple of 16 Octets where the password fits
                 passwordlen=((strlen(value)-(strlen(value)%16))/16);
                 //if it doesn't fit, get the next bigger array.
-                if ((strlen(value)%16)!=0)
-                {
+                if ((strlen(value)%16)!=0) {
                     passwordlen++;
                 }
                 try {
-                  if(!(this->value=new Octet [passwordlen*16])) {
-                    return ALLOC_ERROR;
-                  }
+                  this->value = new Octet [passwordlen*16];
                 } catch (...) {
                   return ALLOC_ERROR;
                 }
                 memset(this->value,0,(passwordlen*16));
                 memcpy(this->value, value, strlen(value));
                 this->length=(Octet)(passwordlen*16);
-
             }
             break;
 
@@ -446,9 +443,7 @@ int RadiusAttribute::setValue(char *value)
         //Special case vender specific, at the moment it is treated as a string.
         case ATTRIB_Vendor_Specific:
           try {
-            if(!(this->value=new Octet [int(value[5])+4])) {
-              return ALLOC_ERROR;
-            }
+            this->value=new Octet [int(value[5])+4];
           } catch (...) {
             return ALLOC_ERROR;
           }
@@ -459,9 +454,7 @@ int RadiusAttribute::setValue(char *value)
         //String: They need only copied in a new char array.
         default:
           try {
-            if(!(this->value=new Octet [strlen(value)])) {
-                return ALLOC_ERROR;
-            }
+            this->value=new Octet [strlen(value)];
           } catch (...) {
             return ALLOC_ERROR;
           }
@@ -472,6 +465,7 @@ int RadiusAttribute::setValue(char *value)
     this->length+=sizeof(Octet)+sizeof(Octet);
     return 0;
 }
+
 
 /** Extract the value of an received attribute in the buffer to
  * the value field of an attribute. The order is still in network
@@ -486,7 +480,6 @@ int RadiusAttribute::setValue(char *value)
 
 int RadiusAttribute::setRecvValue(char *value)
 {
-  std::cerr << "[MEMDEBUG] " << __FILE__ << ":" << __LINE__ << " " << __func__ << "()\n";
   try {
     if(!(this->value=new Octet[this->length-2])) {
         return ALLOC_ERROR;
@@ -513,7 +506,6 @@ int RadiusAttribute::intFromBuf(void)
 /**The overloading of the assignment operator.*/
 RadiusAttribute & RadiusAttribute::operator=(const RadiusAttribute &ra)
 {
-  std::cerr << "[MEMDEBUG] " << __FILE__ << ":" << __LINE__ << " " << __func__ << "()\n";
     this->value=new Octet[ra.length-2];
     this->type=ra.type;
     this->length=ra.length;
@@ -524,29 +516,23 @@ RadiusAttribute & RadiusAttribute::operator=(const RadiusAttribute &ra)
 /**The copy constructor.*/
 RadiusAttribute::RadiusAttribute(const RadiusAttribute &ra)
 {
-  std::cerr << "[MEMDEBUG] " << __FILE__ << ":" << __LINE__ << " " << __func__ << "()\n";
     this->value=new Octet[ra.length-2];
     this->type=ra.type;
     this->length=ra.length;
     memcpy(this->value,ra.value,ra.length-2);
 }
 
+
 /**The method sets the value. Internal it converts the string
  * into a char array and calls setValue(char *).
  * @param s The value as a string.
  * @return An integer. 0 if everything is ok, else !=0.
  */
-int RadiusAttribute::setValue(string s)
+int RadiusAttribute::setValue(const std::string &s)
 {
-  std::cerr << "[MEMDEBUG] " << __FILE__ << ":" << __LINE__ << " " << __func__ << "()\n";
-    int ret;
-    char * value=new char[s.size()+1];
-    memset (value,0,s.size()+1);
-    strncpy(value,s.c_str(),s.size());
-    ret=setValue(value);
-    delete [] value;
-    return ret;
+  return setValue(s.c_str());
 }
+
 
 /** The method sets the value for an integer. The method
  * writes the integer in a string and calls the method
@@ -556,11 +542,12 @@ int RadiusAttribute::setValue(string s)
  */
 int RadiusAttribute::setValue(uint32_t value)
 {
-    char num[11];
-    memset(num,0,11);
-    sprintf(num,"%u",value);
+  char num[11] = {0};
+    // memset(num, 0, 11);
+    sprintf(num, "%u", value);
     return setValue(num);
 }
+
 
 /** The method converts the value into an ip.
  * The attribute must have the right datatype IPADDRESS.
@@ -568,28 +555,11 @@ int RadiusAttribute::setValue(uint32_t value)
  */
 string RadiusAttribute::ipFromBuf(void)
 {
-    int num,i;
-    char ip2[4],ip3[16];
-    memset(ip3,0,16);
-    for (i=0;i<(this->length-2);i++)
-    {
-        num=(int)this->value[i];
-        if(i==0)
-        {
-            sprintf(ip3,"%i",num);
-            strcat(ip3,".");
-        }
-        else if (i<3)
-        {
-            sprintf(ip2,"%i",num);
-            strcat(ip3,ip2);
-            strcat(ip3,".");
-        }
-        else
-        {
-            sprintf(ip2,"%i",num);
-            strcat(ip3,ip2);
-        }
-    }
-    return string(ip3);
+  if(length < (4 + 2)) {
+    return "";
+  }
+  char ip_str[16] = {0};
+  sprintf(ip_str, "%i.%i.%i.%i",
+          value[0], value[1], value[2], value[3]);
+  return ip_str;
 }
