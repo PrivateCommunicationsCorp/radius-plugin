@@ -1,7 +1,7 @@
 /*
- *  radiusplugin -- An OpenVPN plugin for do radius authentication 
- *					and accounting.
- * 
+ *  radiusplugin -- An OpenVPN plugin for do radius authentication
+ *                  and accounting.
+ *
  *  Copyright (C) 2005 EWE TEL GmbH/Ralf Luebben <ralfluebben@gmx.de>
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -18,7 +18,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
- 
+
 
 #include "IpcSocket.h"
 
@@ -26,7 +26,7 @@
 /** The constructor sets the socket to -1.*/
 IpcSocket::IpcSocket()
 {
-	this->socket=-1;
+    this->socket=-1;
 }
 
 /** The constructor sets the socket number.
@@ -34,7 +34,7 @@ IpcSocket::IpcSocket()
  */
 IpcSocket::IpcSocket(int s)
 {
-	this->socket=s;
+    this->socket=s;
 }
 
 /** The destructor closes the socket
@@ -42,11 +42,11 @@ IpcSocket::IpcSocket(int s)
  */
 IpcSocket::~IpcSocket()
 {
-	if (socket != -1)
-	{
-		close (this->socket);
-	}
-	this->socket=-1;
+    if (socket != -1)
+    {
+        close (this->socket);
+    }
+    this->socket=-1;
 }
 
 /** The method sets the socket to s.
@@ -54,7 +54,7 @@ IpcSocket::~IpcSocket()
  */
 void IpcSocket::setSocket(int s)
 {
-	this->socket=s;
+    this->socket=s;
 }
 
 /**The method returns the socket number
@@ -62,7 +62,7 @@ void IpcSocket::setSocket(int s)
  */
 int IpcSocket::getSocket(void)
 {
-	return this->socket;
+    return this->socket;
 }
 
 
@@ -75,14 +75,14 @@ int IpcSocket::getSocket(void)
  */
 void IpcSocket::send(string str)
 {
-	ssize_t len = str.size();
-  	ssize_t size=0;
-  	//send the length of the string
+    ssize_t len = str.size();
+    ssize_t size=0;
+    //send the length of the string
         size = write(this->socket, &len, sizeof(ssize_t));
-  	if (size != sizeof(ssize_t))
-  	{
-  		throw Exception(Exception::SOCKETSEND);
-  	}
+    if (size != sizeof(ssize_t))
+    {
+        throw Exception(Exception::SOCKETSEND);
+    }
         if(len > 0)
         {
           //send the string
@@ -103,22 +103,22 @@ void IpcSocket::send(string str)
  */
 void IpcSocket::send(Octet * value, ssize_t len)
 {
-	ssize_t size=0;
-  	//send the length of the string
-  	size = write (this->socket, &len, sizeof(ssize_t));
-  	if (size != sizeof(ssize_t))
-  	{
-  		throw Exception(Exception::SOCKETSEND);
-  	}
+    ssize_t size=0;
+    //send the length of the string
+    size = write (this->socket, &len, sizeof(ssize_t));
+    if (size != sizeof(ssize_t))
+    {
+        throw Exception(Exception::SOCKETSEND);
+    }
         if (len > 0)
-  	{
-	  	//send the buffer
-	  	size = write (this->socket, value, len);
-	  	if (size != len)
-	  	{
-	  		throw Exception(Exception::SOCKETSEND);
-	  	}
-  	}
+    {
+        //send the buffer
+        size = write (this->socket, value, len);
+        if (size != len)
+        {
+            throw Exception(Exception::SOCKETSEND);
+        }
+    }
 }
 
 /**The method sends an integer via
@@ -126,15 +126,15 @@ void IpcSocket::send(Octet * value, ssize_t len)
  * @param int : The integer to send.
  * @throws Exception::SOCKETSEND if the size of the
  * integer and the sent size are not equal.
- */ 
+ */
 void IpcSocket::send(int num)
 {
-	
-  	const ssize_t size = write (this->socket, &num, sizeof(int));
-  	if (size != sizeof(int))
-  	{
-  		throw Exception(Exception::SOCKETSEND);
-  	}
+
+    const ssize_t size = write (this->socket, &num, sizeof(int));
+    if (size != sizeof(int))
+    {
+        throw Exception(Exception::SOCKETSEND);
+    }
 }
 
 
@@ -146,15 +146,15 @@ void IpcSocket::send(int num)
 
 int IpcSocket::recvInt(void)
 {
-	int num;
-	ssize_t size; 
+    int num;
+    ssize_t size;
         size = read(this->socket, &num, sizeof(int));
-  	if (size != sizeof(int))
-  	{
-  	    
+    if (size != sizeof(int))
+    {
+
             throw Exception(Exception::SOCKETRECV);
-  	}
-  	return num;
+    }
+    return num;
 }
 
 
@@ -166,28 +166,29 @@ int IpcSocket::recvInt(void)
  * The buffer is copied in a string and the string is returned.
  * @return string : A string with the received value.
  * @throws Exception::SOCKETRECV If the received length
- * of the integer for the length or the length of the received string is wrong. 
+ * of the integer for the length or the length of the received string is wrong.
  */
 string IpcSocket::recvStr(void)
 {
-	ssize_t len;
-	char * buffer;
-	ssize_t size;
-	string str;
-	size = read(this->socket,&len,sizeof(ssize_t));
-	if (size!=sizeof(ssize_t))
-	{
-	  throw Exception(Exception::SOCKETRECV);
-	}
+    ssize_t len;
+    char * buffer;
+    ssize_t size;
+    string str;
+    size = read(this->socket,&len,sizeof(ssize_t));
+    if (size!=sizeof(ssize_t))
+    {
+      throw Exception(Exception::SOCKETRECV);
+    }
         if(len > 0)
         {
           try{
-	    buffer=new char[len+1];
-	  }
-	  catch(...)
-	  {
-	    cerr << "RADIUS-PLUGIN: BACKGROUND ACCT: New failed for buffer in IpcSocket::recvStr." << endl;
-	  }
+        buffer=new char[len+1];
+      }
+      catch(...)
+      {
+        cerr << "RADIUS-PLUGIN: BACKGROUND ACCT: New failed for buffer in IpcSocket::recvStr." << endl;
+        return "";
+      }
           memset (buffer, 0, len+1);
           size = read (this->socket, buffer, len);
           if (size!=len)
@@ -206,34 +207,34 @@ string IpcSocket::recvStr(void)
  * the bytes from the socket into the buffer.
  * @return unsigned int : Length of the buffer.
  * @throws Exception::SOCKETRECV If the received length
- * of the integer for the length or the length of the received buffer is wrong. 
+ * of the integer for the length or the length of the received buffer is wrong.
  */
 void IpcSocket::recvBuf(User * user)
 {
-	ssize_t len;
+    ssize_t len;
         ssize_t size;
-	size = read (this->socket,&len,sizeof(ssize_t));
-	if (size!=sizeof(ssize_t))
-	{
-	    throw Exception(Exception::SOCKETRECV);
-	}
-	user->setVsaBufLen(len);
-	if (len > 0)
-	{
-	  try{ 
-	    user->setVsaBuf(new Octet[len]);
-	  }
-	  catch(...)
-	  {
-	    cerr  << "RADIUS-PLUGIN: BACKGROUND ACCT: New failed for buffer in IpcSocket::recvBuf." << endl;
-	  }
-	    size = read (this->socket, user->getVsaBuf(), len);
-	    if (size != len)
-		{
-		  
+    size = read (this->socket,&len,sizeof(ssize_t));
+    if (size!=sizeof(ssize_t))
+    {
+        throw Exception(Exception::SOCKETRECV);
+    }
+    user->setVsaBufLen(len);
+    if (len > 0)
+    {
+      try{
+        user->setVsaBuf(new Octet[len]);
+      }
+      catch(...)
+      {
+        cerr  << "RADIUS-PLUGIN: BACKGROUND ACCT: New failed for buffer in IpcSocket::recvBuf." << endl;
+      }
+        size = read (this->socket, user->getVsaBuf(), len);
+        if (size != len)
+        {
+
                   throw Exception(Exception::SOCKETRECV);
-		}
-	}
-    
+        }
+    }
+
 }
 

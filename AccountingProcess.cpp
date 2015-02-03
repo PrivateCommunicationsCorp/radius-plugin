@@ -402,6 +402,7 @@ int AccountingProcess::callVsaScript(PluginContext * context, User * user, unsig
   catch(...)
   {
     log() << "Memory allocatoin failed for framedroutes buf.\n";
+    return -1;
   }
   unsigned int value = htonl(action);
   memcpy(buf,&value, 4);
