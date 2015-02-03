@@ -153,98 +153,195 @@ void RadiusAttribute::setLength(Octet len)
  * @return A pointer to the hpassword array, so the function can
  * be used directly in a function/method.
  */
-char * RadiusAttribute::makePasswordHash(const char *password,char * hpassword, const char *sharedSecret,const char *authenticator)
+char * RadiusAttribute::makePasswordHash(const char *password, char *hpassword,
+                                         const char *sharedSecret, const char *authenticator)
+{
+  unsigned char digest[MD5_DIGEST_LENGTH] = {0}; //The digest.
+  gcry_md_hd_t context;                          //the hash context
+  int i,k,j,l,                                   //Some counters.
+    passwordlen;                                 //The password length.
+
+  if(!gcry_control(GCRYCTL_ANY_INITIALIZATION_P))
+  { /* No other library has already initialized libgcrypt. */
+    gcry_error_t err = 0;
+    err |= gcry_control(GCRYCTL_SET_THREAD_CBS,&gcry_threads_pthread);
+    if(err) {
+      std::cerr << "libgcrypt gcry_control(GCRYCTL_SET_THREAD_CBS,&gcry_threads_pthread) failed!\n";}
+
+    if (!gcry_check_version(NEED_LIBGCRYPT_VERSION) ) {
+      cerr << "libgcrypt is too old (need " << NEED_LIBGCRYPT_VERSION
+           << ", have " << gcry_check_version (NULL) << ")\n";
+      // actually it's really not ok!! fail
+    }
+    /* Disable secure memory.  */
+    err |= gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
+    if(err) {
+      std::cerr << "libgcrypt gcry_control(GCRYCTL_DISABLE_SECMEM, 0) failed!\n";}
+
+    err |= gcry_control(GCRYCTL_INITIALIZATION_FINISHED);
+    if(err) {
+      std::cerr << "libgcrypt gcry_control(GCRYCTL_INITIALIZATION_FINISHED) failed!\n";}
+
+    if(err) {
+      std::cerr << "libgcrypt initialization failed!\n";
+      // fail
+    }
+  }
+  gcry_md_open(&context, GCRY_MD_MD5, 0);
+  gcry_md_write(context, sharedSecret, strlen(sharedSecret));
+  gcry_md_write(context, authenticator, MD5_DIGEST_LENGTH);
+  unsigned char *msg_dig = gcry_md_read(context, GCRY_MD_MD5);
+  if(msg_dig) {
+    memcpy(digest, msg_dig, MD5_DIGEST_LENGTH);
+  } else {
+    std::cerr << "libgcrypt message read failed! ("
+              << __func__ << ": " << __LINE__ << ")\n";
+    // fail
+  }
+  if(this->length < MD5_DIGEST_LENGTH) {
+    //XOR the password and the digest
+    for(i=0; i < MD5_DIGEST_LENGTH; ++i) {
+      hpassword[i] = password[i] ^ digest[i];
+    }
+  }
+  else
+  {
+    passwordlen = this->length - 2; //get the length of the passwordfield
+
+    //XOR the password and the digest, build the first xOR-hash
+    for(i = 0; i < MD5_DIGEST_LENGTH; ++i) {
+      hpassword[i] = password[i] ^ digest[i];
+    }
+    passwordlen = passwordlen - MD5_DIGEST_LENGTH;  //the next 16 charakters
+    k = -1;                        //the first loop
+    while(passwordlen > 0)
+    {
+      //build the next hash
+      memset(digest, 0, MD5_DIGEST_LENGTH);
+
+      // release previouse message digest context and related resources
+      // gcry_md_close(context);
+      //put the hash of the last XOR in the digest, build the hash
+      // gcry_md_open (&context, GCRY_MD_MD5, 0);
+      gcry_md_reset(context);
+      gcry_md_write(context, sharedSecret, strlen(sharedSecret));
+      gcry_md_write(context, hpassword + (++k * MD5_DIGEST_LENGTH), MD5_DIGEST_LENGTH);
+
+      unsigned char *msg_dig = gcry_md_read(context, GCRY_MD_MD5);
+      if(msg_dig) {
+        memcpy(digest, msg_dig, MD5_DIGEST_LENGTH);
+      } else {
+        std::cerr << "libgcrypt message read failed! ("
+                  << __func__ << ": " << __LINE__ << ")\n";
+        // fail
+      }
+
+      j=-1;
+      l= i + MD5_DIGEST_LENGTH;
+      for(; i < l; ++i) {
+        hpassword[i] = password[i] ^ digest[++j];
+      }
+      passwordlen = passwordlen - MD5_DIGEST_LENGTH;      //and the next 16 characters
+    }
+  }
+  gcry_md_close(context);
+  return hpassword;
+}
+
+
+char * RadiusAttribute::makePasswordHashPrev(const char *password,char * hpassword, const char *sharedSecret,const char *authenticator)
 {
 
-    unsigned char digest[MD5_DIGEST_LENGTH];    //The digest.
-    gcry_md_hd_t context;                   //the hash context
-    int i,k,j,l,                                //Some counters.
-        passwordlen;                            //The password length.
+  unsigned char digest[MD5_DIGEST_LENGTH];    //The digest.
+  gcry_md_hd_t context;                   //the hash context
+  int i,k,j,l,                                //Some counters.
+    passwordlen;                            //The password length.
 
-    memset(digest,0,MD5_DIGEST_LENGTH);
+  memset(digest,0,MD5_DIGEST_LENGTH);
 
-    //build the hash
-    if (!gcry_control (GCRYCTL_ANY_INITIALIZATION_P))
-    { /* No other library has already initialized libgcrypt. */
+  //build the hash
+  if (!gcry_control (GCRYCTL_ANY_INITIALIZATION_P))
+  { /* No other library has already initialized libgcrypt. */
 
-      gcry_control(GCRYCTL_SET_THREAD_CBS,&gcry_threads_pthread);
+    gcry_control(GCRYCTL_SET_THREAD_CBS,&gcry_threads_pthread);
 
-      if (!gcry_check_version (NEED_LIBGCRYPT_VERSION) )
+    if (!gcry_check_version (NEED_LIBGCRYPT_VERSION) )
+    {
+      cerr << "libgcrypt is too old (need " << NEED_LIBGCRYPT_VERSION << ", have " << gcry_check_version (NULL) << ")\n";
+    }
+    /* Disable secure memory.  */
+    gcry_control (GCRYCTL_DISABLE_SECMEM, 0);
+
+    gcry_control (GCRYCTL_INITIALIZATION_FINISHED);
+  }
+
+  gcry_md_open(&context, GCRY_MD_MD5, 0);
+  gcry_md_write(context, sharedSecret, strlen(sharedSecret));
+  gcry_md_write(context, authenticator, MD5_DIGEST_LENGTH);
+  memcpy(digest, gcry_md_read(context, GCRY_MD_MD5), MD5_DIGEST_LENGTH);
+  if (this->length<MD5_DIGEST_LENGTH)
+  {
+    //XOR the password and the digest
+    for(i=0;i<MD5_DIGEST_LENGTH;++i) hpassword[i]=password[i]^digest[i];
+  }
+  else
+  {
+    passwordlen=this->length-2; //get the length of the passwordfield
+
+    //XOR the password and the digest
+    //build the first xOR-hash
+    for(i=0;i<MD5_DIGEST_LENGTH;i++)
+    {
+      hpassword[i]=password[i]^digest[i];
+
+    }
+    passwordlen=passwordlen-MD5_DIGEST_LENGTH;  //the next 16 charakters
+    k=0;                        //the first loop
+    while (passwordlen>0)
+    {
+      //build the next hash
+      memset(digest,0,MD5_DIGEST_LENGTH);
+
+      //put the hash of the last XOR in the digest
+      //build the hash
+      if (!gcry_control (GCRYCTL_ANY_INITIALIZATION_P))
+      { /* No other library has already initialized libgcrypt. */
+
+        gcry_control(GCRYCTL_SET_THREAD_CBS,&gcry_threads_pthread);
+
+        if (!gcry_check_version (NEED_LIBGCRYPT_VERSION) )
         {
-        cerr << "libgcrypt is too old (need " << NEED_LIBGCRYPT_VERSION << ", have " << gcry_check_version (NULL) << ")\n";
+          cerr << "libgcrypt is too old (need " << NEED_LIBGCRYPT_VERSION << ", have " << gcry_check_version (NULL) << ")\n";
         }
         /* Disable secure memory.  */
-          gcry_control (GCRYCTL_DISABLE_SECMEM, 0);
-
-      gcry_control (GCRYCTL_INITIALIZATION_FINISHED);
-    }
-
-    gcry_md_open(&context, GCRY_MD_MD5, 0);
-    gcry_md_write(context, sharedSecret, strlen(sharedSecret));
-    gcry_md_write(context, authenticator, MD5_DIGEST_LENGTH);
-    memcpy(digest, gcry_md_read(context, GCRY_MD_MD5), MD5_DIGEST_LENGTH);
-    if (this->length<MD5_DIGEST_LENGTH)
-    {
-        //XOR the password and the digest
-        for(i=0;i<MD5_DIGEST_LENGTH;++i) hpassword[i]=password[i]^digest[i];
-    }
-    else
-    {
-        passwordlen=this->length-2; //get the length of the passwordfield
-
-        //XOR the password and the digest
-        //build the first xOR-hash
-        for(i=0;i<MD5_DIGEST_LENGTH;i++)
-        {
-            hpassword[i]=password[i]^digest[i];
-
-        }
-        passwordlen=passwordlen-MD5_DIGEST_LENGTH;  //the next 16 charakters
-        k=0;                        //the first loop
-        while (passwordlen>0)
-        {
-            //build the next hash
-            memset(digest,0,MD5_DIGEST_LENGTH);
-
-            //put the hash of the last XOR in the digest
-            //build the hash
-            if (!gcry_control (GCRYCTL_ANY_INITIALIZATION_P))
-            { /* No other library has already initialized libgcrypt. */
-
-              gcry_control(GCRYCTL_SET_THREAD_CBS,&gcry_threads_pthread);
-
-              if (!gcry_check_version (NEED_LIBGCRYPT_VERSION) )
-                {
-                cerr << "libgcrypt is too old (need " << NEED_LIBGCRYPT_VERSION << ", have " << gcry_check_version (NULL) << ")\n";
-                }
-              /* Disable secure memory.  */
-              gcry_control (GCRYCTL_DISABLE_SECMEM, 0);
-              gcry_control (GCRYCTL_INITIALIZATION_FINISHED);
-            }
-            gcry_md_open (&context, GCRY_MD_MD5, 0);
-            gcry_md_write(context, sharedSecret, strlen(sharedSecret));
-            gcry_md_write(context, hpassword+(k*MD5_DIGEST_LENGTH), MD5_DIGEST_LENGTH);
-            memcpy(digest, gcry_md_read(context, GCRY_MD_MD5), MD5_DIGEST_LENGTH);
+        gcry_control (GCRYCTL_DISABLE_SECMEM, 0);
+        gcry_control (GCRYCTL_INITIALIZATION_FINISHED);
+      }
+      gcry_md_open (&context, GCRY_MD_MD5, 0);
+      gcry_md_write(context, sharedSecret, strlen(sharedSecret));
+      gcry_md_write(context, hpassword+(k*MD5_DIGEST_LENGTH), MD5_DIGEST_LENGTH);
+      memcpy(digest, gcry_md_read(context, GCRY_MD_MD5), MD5_DIGEST_LENGTH);
 
 
-            j=0;
-            l=i+MD5_DIGEST_LENGTH;
-            for(;i<l;i++)
-            {
-                hpassword[i]=password[i]^digest[j];
-                j++;
+      j=0;
+      l=i+MD5_DIGEST_LENGTH;
+      for(;i<l;i++)
+      {
+        hpassword[i]=password[i]^digest[j];
+        j++;
 
-            }
-            passwordlen=passwordlen-MD5_DIGEST_LENGTH;      //and the next 16 characters
-            k++;                            //and the next loop
-
-        }
+      }
+      passwordlen=passwordlen-MD5_DIGEST_LENGTH;      //and the next 16 characters
+      k++;                            //and the next loop
 
     }
-    gcry_md_close(context);
-    return hpassword;
+
+  }
+  gcry_md_close(context);
+  return hpassword;
 
 }
+
 
 
 /** The getter method for the type of the attribute.
@@ -275,7 +372,7 @@ void RadiusAttribute::setType(Octet type)
  * @return The value as an Octet.*/
 Octet * RadiusAttribute::getValue(void)
 {
-    return (this->value);
+    return value;
 }
 
 

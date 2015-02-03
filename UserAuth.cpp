@@ -237,14 +237,14 @@ void UserAuth::parseResponsePacket(RadiusPacket *packet, PluginContext * context
 /** The getter method for the password.
  * @return The password as a string.
  */
-string UserAuth::getPassword(void)
+const std::string &UserAuth::getPassword(void)
 {
     return this->password;
 }
 /**The setter method for the password.
  * @param passwd The password.
  */
-void UserAuth::setPassword(string passwd)
+void UserAuth::setPassword(const std::string &passwd)
 {
     this->password=passwd;
 }
@@ -253,7 +253,7 @@ string UserAuth::valueToString(RadiusVendorSpecificAttribute *vsa)
 {
     int id=vsa->getId();
     int type=vsa->getType();
-    char buffer[50];
+    char buffer[50] = {0};
 
 
     /* File was generated from dictionary file of freeradius 1.0.2. */

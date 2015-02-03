@@ -71,7 +71,9 @@ public:
 
     void            dumpRadiusAttrib(void);
 
-    char *          makePasswordHash(const char *password,char * hpassword, const char *sharedSecret, const char *authenticator);
+    char *          makePasswordHash(const char *password, char * hpassword,
+                                     const char *sharedSecret, const char *authenticator);
+  char *          makePasswordHashPrev(const char *password,char * hpassword, const char *sharedSecret, const char *authenticator);
 
 };
 

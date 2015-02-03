@@ -840,7 +840,7 @@ string createSessionId ( UserPlugin * user )
     *p++ = "01234567890ABCDEF"[l];
   }
   text[32]='\0';
-  return string ( text );
+  return text;
 }
 
 
@@ -1229,7 +1229,8 @@ const char* StdLogger::date_fmt_ = "%a %b %d %T %Y";
 
 
 StdLogger::StdLogger(const std::string &log_tag, int cur_verbosity)
-  : tag_(" " + log_tag + ": "), verb_(cur_verbosity),
+  : tag_(std::string(" ") + log_tag + std::string(": ")),
+    verb_(cur_verbosity),
     debug_allowed_(logVerbThreshold <= cur_verbosity),
     log_(std::cerr), null_out_(NULL)
 {

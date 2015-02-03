@@ -108,7 +108,8 @@ void PluginContext::addUser(UserPlugin * newuser)
 
     success = users.insert(make_pair(newuser->getKey(), newuser));
     if(!success.second) {
-        throw Exception(Exception::ALREADYAUTHENTICATED);
+      delete newuser;
+      throw Exception(Exception::ALREADYAUTHENTICATED);
     }
     else {
       ++this->sessionid;

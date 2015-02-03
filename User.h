@@ -67,27 +67,27 @@ public:
     User & operator=(const User &);
     User(const User &);
 
-    string getUsername(void);
-    void setUsername(string);
+    const std::string &getUsername(void);
+  void setUsername(const std::string&);
 
-    string getCommonname(void);
-    void setCommonname(string);
+    const std::string &getCommonname(void);
+  void setCommonname(const std::string&);
 
 
-    string getFramedRoutes(void);
-    void setFramedRoutes(string);
+    const std::string &getFramedRoutes(void);
+  void setFramedRoutes(const std::string&);
 
-    string getFramedIp(void);
-    void setFramedIp(string);
+    const std::string &getFramedIp(void);
+  void setFramedIp(const std::string&);
 
-    string getKey(void) const;
-    void setKey(string);
+    const std::string &getKey(void) const;
+  void setKey(const std::string&);
 
-    string getStatusFileKey(void);
-    void setStatusFileKey(string);
+    const std::string &getStatusFileKey(void);
+  void setStatusFileKey(const std::string&);
 
-    string getCallingStationId(void);
-    void setCallingStationId(string);
+  const std::string &getCallingStationId(void);
+  void setCallingStationId(const std::string&);
 
     int getPortnumber(void);
     void setPortnumber(int);
@@ -95,8 +95,8 @@ public:
     time_t getAcctInterimInterval(void) const;
     void setAcctInterimInterval(time_t);
 
-    string getUntrustedPort(void);
-    void setUntrustedPort(string);
+  const std::string &getUntrustedPort(void);
+    void setUntrustedPort(const std::string&);
 
     int appendVsaBuf(Octet *, unsigned int len);
     Octet * getVsaBuf();
@@ -105,8 +105,8 @@ public:
     unsigned int getVsaBufLen();
     void setVsaBufLen(unsigned int);
 
-    string getSessionId(void);
-    void setSessionId(string);
+  const std::string &getSessionId(void);
+    void setSessionId(const std::string&);
 
 //  void setTrustedPort ( const string& theValue );
 //

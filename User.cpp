@@ -143,94 +143,94 @@ User::User(const User & u)
 
 /** The getter method for the username.
  * @return The username as a string.*/
-string User::getUsername(void)
+const std::string &User::getUsername(void)
 {
     return this->username;
 }
 /** The setter method for the username.
  * @param uname The username.*/
-void User::setUsername(string uname)
+void User::setUsername(const std::string &uname)
 {
     this->username=uname;
 }
 
 /** The getter method for the commonname.
  *  @return The commonname as a string.*/
-string User::getCommonname(void)
+const std::string &User::getCommonname(void)
 {
     return this->commonname;
 }
 /** The setter method for the commonname.
  * @param cn The commonname.*/
-void User::setCommonname(string cn)
+void User::setCommonname(const std::string &cn)
 {
     this->commonname=cn;
 }
 
 /** The getter method for the framed routes.
  *  @return The framed routes as a string.*/
-string User::getFramedRoutes(void)
+const std::string &User::getFramedRoutes(void)
 {
     return this->framedroutes;
 }
 /** The setter method for the framedroutes.
  * @param froutes The framedroutes, if there are more
  * routes they are diveded through a ';'.*/
-void User::setFramedRoutes(string froutes)
+void User::setFramedRoutes(const std::string &froutes)
 {
     this->framedroutes=froutes;
 }
 
 /** The getter method for the framed ip.
  *  @return The framed ip as a string.*/
-string User::getFramedIp(void)
+const std::string &User::getFramedIp(void)
 {
     return this->framedip;
 }
 /** The setter method for the framedip.
  * @param ip The framedip.*/
-void User::setFramedIp(string ip)
+void User::setFramedIp(const std::string &ip)
 {
     this->framedip=ip;
 }
 
 /** The getter method for the fkey.
  *  @return The unique key as a string.*/
-string User::getKey(void) const
+const std::string &User::getKey(void) const
 {
     return this->key;
 }
 /** The setter method for a unique, it is build from ip and port.
  * @param key The unique key.
  */
-void User::setKey(string key)
+void User::setKey(const std::string &key)
 {
     this->key=key;
 }
 
 /** The getter method for the status file key.
  *  @return The unique status file key as a string.*/
-string User::getStatusFileKey(void)
+const std::string &User::getStatusFileKey(void)
 {
     return this->statusfilekey;
 }
 /** The setter method for a unique, it is build from commonname, ip and port.
  * @param key The unique status file key.
  */
-void User::setStatusFileKey(string key)
+void User::setStatusFileKey(const std::string &key)
 {
     this->statusfilekey=key;
 }
 
 /** The getter method for the calling station id.
  *  @return The calling station id as a string.*/
-string User::getCallingStationId(void)
+const std::string &User::getCallingStationId(void)
 {
     return this->callingstationid;
 }
 /** The setter method for the callingstationid.
  * @param id The callingstationid.*/
-void User::setCallingStationId(string id)
+void User::setCallingStationId(const std::string &id)
 {
     this->callingstationid=id;
 }
@@ -265,7 +265,7 @@ void User::setAcctInterimInterval(time_t t)
 /** The getter method for untrusted port.
  * @return untrusted port
  */
-string User::getUntrustedPort(void)
+const std::string &User::getUntrustedPort(void)
 {
     return this->untrustedport;
 }
@@ -274,7 +274,7 @@ string User::getUntrustedPort(void)
 /**The setter method for untrusted port.
  * @param The untrusted port number as string.
  */
-void User::setUntrustedPort(string port)
+void User::setUntrustedPort(const std::string &port)
 {
     this->untrustedport=port;
 }
@@ -358,13 +358,13 @@ void User::setVsaBufLen(unsigned int len)
 
 /** The getter method for the sessionid.
  * @return An integer of the sessionid.*/
-string User::getSessionId(void)
+const std::string &User::getSessionId(void)
 {
     return this->sessionid;
 }
 /**The setter method for the sessionid.
  * @param id The session id.*/
-void User::setSessionId(string id)
+void User::setSessionId(const std::string &id)
 {
     this->sessionid=id;
 }
