@@ -335,7 +335,10 @@ Octet * User::getVsaBuf()
  */
 void User::setVsaBuf(Octet * pbuf)
 {
-    this->vsabuf=pbuf;
+  if(!pbuf) {
+    vsabuflen = 0;
+  }
+  this->vsabuf=pbuf;
 }
 
 /** Getter method for the buffer length.

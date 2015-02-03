@@ -393,10 +393,8 @@ extern "C"
           context->addNewUser(newuser);
           pthread_cond_signal( context->getCondSend( ));
           pthread_mutex_unlock (context->getMutexSend());
-
           pthread_cond_wait( context->getCondRecv(), context->getMutexRecv());
           pthread_mutex_unlock (context->getMutexRecv());
-
           return context->getResult();
         }
       }
@@ -413,6 +411,9 @@ extern "C"
       {
         cerr << getTime() << "Unknown Exception!";
       }
+
+      pthread_mutex_unlock (context->getMutexSend());
+      pthread_mutex_unlock (context->getMutexRecv());
       return OPENVPN_PLUGIN_FUNC_ERROR;
       /////////////////////////// CLIENT_CONNECT
     }
@@ -447,7 +448,7 @@ extern "C"
           }
         }
         else {
-          delete(tmpuser);
+          delete tmpuser;
         }
 
         //set the assigned ip as Framed-IP-Attribute of the user (see RFC2866, chapter 4.1 for more information)
@@ -871,18 +872,19 @@ void  * auth_user_pass_verify(void * c)
   while (!context->getStopThread())
   {
     try{
-    if (context->UserWaitingtoAuth()==false)
+    if (context->UserWaitingtoAuth() == false)
     {
       if ( DEBUG ( context->getVerbosity() ) ) {
         cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Waiting for new user." << endl;
       }
       cout.flush(); cerr.flush();
       pthread_mutex_lock(context->getMutexSend());
-      pthread_cond_wait(context->getCondSend(),context->getMutexSend());
+      while(context->UserWaitingtoAuth() == false) {
+        pthread_cond_wait(context->getCondSend(),context->getMutexSend());
+      }
       pthread_mutex_unlock(context->getMutexSend());
     }
-    if (context->getStopThread()==true)
-    {
+    if (context->getStopThread() == true) {
       cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Stop signal received." << endl;
       break;
     }
@@ -1003,7 +1005,6 @@ void  * auth_user_pass_verify(void * c)
         {
           pthread_mutex_lock(context->getMutexRecv());
           context->setResult(OPENVPN_PLUGIN_FUNC_SUCCESS);
-
           pthread_cond_signal( context->getCondRecv( ));
           pthread_mutex_unlock (context->getMutexRecv());
         }
@@ -1065,7 +1066,6 @@ void  * auth_user_pass_verify(void * c)
       {
         pthread_mutex_lock(context->getMutexRecv());
         context->setResult(OPENVPN_PLUGIN_FUNC_ERROR);
-
         pthread_cond_signal( context->getCondRecv( ));
         pthread_mutex_unlock (context->getMutexRecv());
       }
@@ -1085,6 +1085,7 @@ void  * auth_user_pass_verify(void * c)
       break;
     }
   }
+  pthread_mutex_unlock(context->getMutexRecv());
   pthread_mutex_unlock(context->getMutexSend());
   cerr << getTime() << "RADIUS-PLUGIN: FOREGROUND THREAD: Thread finished.\n";
   context->setStartThread(false);
@@ -1273,7 +1274,8 @@ void StdLogger::flush()
 
 const char *StdLogger::time_()
 {
-  std::time_t t = std::time(NULL);
+  std::time_t t;
+  std::time(&t);
   if(!std::strftime(buf_, time_buf_len_, date_fmt_, std::localtime(&t))) {
     buf_[time_buf_len_ - 1] = 0;
   }

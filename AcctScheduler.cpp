@@ -153,10 +153,17 @@ void AcctScheduler::doAccounting(PluginContext * context)
     iter1=activeuserlist.begin();
     iter2=activeuserlist.end();
 
+    time_t start_time;
+    time(&start_time);
     while (iter1!=iter2)
     {
         //get the time
         time(&t);
+
+        if((t - start_time) > iter1->second.getAcctInterimInterval()) {
+          log() << "Update ticket loop interrupted (to avoid progressive delay)\n";
+          return;
+        }
         //if the user needs an update
         if ( t>=iter1->second.getNextUpdate())
         {
